@@ -67,6 +67,19 @@
         </dependency>
 
 		<dependency>
+            <groupId>ru.cryptopro.jcp</groupId>
+            <artifactId>jcp-xml</artifactId>
+            <version>5.0.40363-A</version>
+        </dependency>
+
+        <!-- Apache XML Security -->
+        <dependency>
+            <groupId>org.apache.santuario</groupId>
+            <artifactId>xmlsec</artifactId>
+            <version>2.1.2</version>
+        </dependency>
+		
+		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-thymeleaf</artifactId>
 		</dependency>

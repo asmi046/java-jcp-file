@@ -1,15 +1,13 @@
 package ru.asmi.java_jcp_file;
 
 import java.io.IOException;
-import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import java.security.UnrecoverableEntryException;
-import java.security.cert.CertificateException;
 
-
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,70 +22,84 @@ public class JavaJcpFileApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(JavaJcpFileApplication.class, args);
 	}
-
 }
 
 @Controller
 @RequestMapping("/api")
 class FileChecksumController {
 
-    @PostMapping(value = "/checksum", produces = "application/pkcs7-signature")
+	@Value("${sign.alias}")
+	private String signAlias;
+
+	@Value("${sign.password}")
+	private String signPassword;
+
+    @PostMapping(value = "/sign", produces = "application/pkcs7-signature")
 	@ResponseBody
-    public byte[] calculateChecksum(@RequestParam("file") MultipartFile file) throws IOException, NoSuchAlgorithmException {
+    public ResponseEntity<?> calculateChecksum(@RequestParam("file") MultipartFile file) throws IOException, NoSuchAlgorithmException {
         if (file.isEmpty()) {
-            throw new IllegalArgumentException("File is empty");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Error: File is empty");
         }
 
 		try {
-			CryptoProServices cryptoProServices = new CryptoProServices("qonnfw1l", "7pchnyy6");
-			// return cryptoProServices.signDataRaw(file.getBytes());
-
-			// Сохраняем результат в файл
+			CryptoProServices cryptoProServices = new CryptoProServices(signAlias, signPassword);
 			byte[] pkcs7Bytes = cryptoProServices.createPKCS7(file.getBytes());
-			// byte[] pkcs7Bytes = cryptoProServices.signByteArray(file.getBytes());
-			java.nio.file.Files.write(java.nio.file.Paths.get("1.txt.p7s"), pkcs7Bytes);
+			return ResponseEntity.ok(pkcs7Bytes);
 
-			return pkcs7Bytes;
-
-		} catch (KeyStoreException | NoSuchProviderException | NoSuchAlgorithmException | CertificateException
-				| UnrecoverableEntryException | IOException e) {
-			// TODO Auto-generated catch block
+		}  catch (Exception e) {
 			e.printStackTrace();
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error: " + e.getMessage());
 		}
-		return null;
+
     }
+
+
+	@PostMapping(value = "/sign_xml", produces = "application/xml")
+    @ResponseBody
+    public ResponseEntity<?> signXml(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("elementId") String elementId,
+            @RequestParam("signatureElementName") String signatureElementName) {
+
+        if (file.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("<error>File is empty</error>");
+        }
+
+        try {
+            CruptoProXmlServices cryptoProXmlServices = new CruptoProXmlServices(signAlias, signPassword);
+
+			String signedXml = cryptoProXmlServices.processXmlSignature(elementId, signatureElementName, file.getBytes());
+
+            return ResponseEntity.ok(signedXml);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("<error>" + e.getMessage() + "</error>");
+        }
+    }
+
     
 	@PostMapping(value = "/verify")
 	@ResponseBody
-    public boolean verifyChecksum(@RequestParam("file") MultipartFile file, @RequestParam("signature") MultipartFile signature) throws IOException, NoSuchAlgorithmException {
+    public ResponseEntity<?> verifyChecksum(@RequestParam("file") MultipartFile file, @RequestParam("signature") MultipartFile signature) throws IOException, NoSuchAlgorithmException {
         if (file.isEmpty()) {
-            throw new IllegalArgumentException("File is empty");
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).body("Error: File is empty");
         }
         if (signature.isEmpty()) {
-            throw new IllegalArgumentException("Signature is empty");
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).body("Error: Signature is empty");
         }
 
 		try {
-			CryptoProServices cryptoProServices = new CryptoProServices("qonnfw1l", "7pchnyy6");
-			// return cryptoProServices.signDataRaw(file.getBytes());
+			CryptoProServices cryptoProServices = new CryptoProServices(signAlias, signPassword);
 
-			// Сохраняем результат в файл
 			boolean verified = cryptoProServices.verifyPKCS7(signature.getBytes(), file.getBytes());
+			return ResponseEntity.ok(verified);
 
-			return verified;
-
-		} catch (KeyStoreException | NoSuchProviderException | NoSuchAlgorithmException | CertificateException
-				| UnrecoverableEntryException | IOException e) {
-			// TODO Auto-generated catch block
+		}  catch (Exception e) {
 			e.printStackTrace();
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error: " + e.getMessage());
 		}
-		return false;
     }
 
 	@GetMapping("/")

@@ -87,62 +87,6 @@ public class CryptoProServices {
     }
 
 
-    public byte[] signByteArray(byte[] data) throws Exception {
-
-        ContentInfo all = new ContentInfo();
-        all.contentType = new Asn1ObjectIdentifier(new OID(STR_CMS_OID_SIGNED).value);
-        final SignedData cms = new SignedData();
-        all.content = cms;
-        cms.version = new CMSVersion(4);
-        cms.digestAlgorithms = new DigestAlgorithmIdentifiers(new DigestAlgorithmIdentifier[]{new DigestAlgorithmIdentifier(new OID(JCP.GOST_DIGEST_OID).value)});
-        cms.encapContentInfo = new EncapsulatedContentInfo(
-                new Asn1ObjectIdentifier(
-                        new OID(STR_CMS_OID_DATA).value),
-                null);
-        X509Certificate cert = certificate;
-
-        cms.certificates = new CertificateSet(1);
-
-        final ru.CryptoPro.JCP.ASN.PKIX1Explicit88.Certificate asnCertificate =
-            new ru.CryptoPro.JCP.ASN.PKIX1Explicit88.Certificate();
-
-        final Asn1BerDecodeBuffer decodeBuffer =
-            new Asn1BerDecodeBuffer(certificate.getEncoded());
-        asnCertificate.decode(decodeBuffer);
-
-        cms.certificates.elements = new CertificateChoices[1];
-        cms.certificates.elements[0] = new CertificateChoices();
-        cms.certificates.elements[0].set_certificate(asnCertificate);
-
-        byte[] sign;
-        java.security.Signature signature = java.security.Signature.getInstance(JCP.GOST_SIGN_2012_256_NAME);
-        signature.initSign(privateKey);
-
-        signature.update(data);
-        sign = signature.sign();
-
-        cms.signerInfos = new SignerInfos(1);
-        cms.signerInfos.elements[0] = new SignerInfo();
-        cms.signerInfos.elements[0].version = new CMSVersion(1); //because of issuerAndSerialNumber. More: rfc.3852, p.13.
-        cms.signerInfos.elements[0].sid = new SignerIdentifier();
-        final byte[] encodedName = cert.getIssuerX500Principal().getEncoded();
-        final Asn1BerDecodeBuffer nameBuf = new Asn1BerDecodeBuffer(encodedName);
-        final Name name = new Name();
-        name.decode(nameBuf);
-
-        final CertificateSerialNumber num = new CertificateSerialNumber(cert.getSerialNumber());
-        cms.signerInfos.elements[0].sid.set_issuerAndSerialNumber(new IssuerAndSerialNumber(name, num));
-        cms.signerInfos.elements[0].digestAlgorithm = new DigestAlgorithmIdentifier(new OID(JCP.GOST_DIGEST_2012_256_OID).value);
-        cms.signerInfos.elements[0].digestAlgorithm.parameters = new Asn1Null();
-        cms.signerInfos.elements[0].signatureAlgorithm = new SignatureAlgorithmIdentifier(new OID(JCP.GOST_PARAMS_SIG_2012_256_KEY_OID).value);
-        cms.signerInfos.elements[0].signatureAlgorithm.parameters = new Asn1Null();
-
-        cms.signerInfos.elements[0].signature = new SignatureValue(sign);
-        final Asn1BerEncodeBuffer asnBuf = new Asn1BerEncodeBuffer();
-        all.encode(asnBuf, true);
-        return asnBuf.getMsgCopy();
-    }
-
     /**
      * Функция формирования простой отсоединенной подписи формата PKCS#7
      * по хешу сообщения.
@@ -315,7 +259,7 @@ public class CryptoProServices {
 
             final byte[] in = encBuf.getMsgCopy();
             if (Arrays.equals(in, certificate.getEncoded())) {
-                System.out.println("Selected certificate: " + certificate.getSubjectDN());
+                // System.out.println("Selected certificate: " + certificate.getSubjectDN());
                 pos = i;
                 break;
             } // if
