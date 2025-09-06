@@ -2,6 +2,7 @@ package ru.asmi.java_jcp_file;
 import java.io.IOException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
@@ -28,6 +29,7 @@ import ru.CryptoPro.JCP.ASN.CryptographicMessageSyntax.DigestAlgorithmIdentifier
 import ru.CryptoPro.JCP.ASN.CryptographicMessageSyntax.DigestAlgorithmIdentifiers;
 import ru.CryptoPro.JCP.ASN.CryptographicMessageSyntax.EncapsulatedContentInfo;
 import ru.CryptoPro.JCP.ASN.CryptographicMessageSyntax.IssuerAndSerialNumber;
+
 import ru.CryptoPro.JCP.ASN.CryptographicMessageSyntax.SignatureAlgorithmIdentifier;
 import ru.CryptoPro.JCP.ASN.CryptographicMessageSyntax.SignatureValue;
 import ru.CryptoPro.JCP.ASN.CryptographicMessageSyntax.SignedData;
@@ -84,6 +86,16 @@ public class CryptoProServices {
         sig.initSign(privateKey);
         sig.update(data);
         return sig.sign();
+    }
+    
+    public byte[] digestDataRaw(byte[] data) throws Exception {
+        if (privateKey == null || certificate == null) {
+            throw new IllegalStateException("Private key or certificate not initialized");
+        }
+
+        MessageDigest sig = MessageDigest.getInstance("GOST3411_2012_256", "JCSP");
+        sig.update(data);
+        return sig.digest();
     }
 
 

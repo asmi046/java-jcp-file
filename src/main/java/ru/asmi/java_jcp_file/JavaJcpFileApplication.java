@@ -52,6 +52,25 @@ class FileChecksumController {
 		}
 
     }
+    
+    @PostMapping(value = "/digest", produces = "application/octet-stream")
+	@ResponseBody
+    public ResponseEntity<?> calculateDigest(@RequestParam("file") MultipartFile file) throws IOException, NoSuchAlgorithmException {
+        if (file.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Error: File is empty");
+        }
+
+		try {
+			CryptoProServices cryptoProServices = new CryptoProServices(signAlias, signPassword);
+			byte[] digest = cryptoProServices.digestDataRaw(file.getBytes());
+			return ResponseEntity.ok(digest);
+
+		}  catch (Exception e) {
+			e.printStackTrace();
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error: " + e.getMessage());
+		}
+
+    }
 
 
 	@PostMapping(value = "/sign_xml", produces = "application/xml")
